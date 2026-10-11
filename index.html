@@ -239,7 +239,7 @@ function screenHome() {
   else if (S.won) msg = `<span class="purple">Дракон повержен ${S.wonAt}.</span> Награда: <b class="gold">400 ₽</b>. Ещё <b class="gold">+300 ₽</b> — если ответишь маме вслух 10 примеров без ошибок. ` +
     (raidOpen ? `<b class="gold">Рейд открыт!</b> 40 примеров без ошибок = <b class="gold">+100 ₽</b>.` : `Рейд на <b class="gold">+100 ₽</b> откроется через ${7 - daysBetween(S.won, t)} дн.`);
   else if (dragonOpen) msg = canDragon ? `<b class="purple">Эндер-дракон проснулся!</b> 80 примеров, по 3 секунды, без единой ошибки = <b class="gold">400 ₽</b>.` : `Дракон отдыхает до завтра. Потренируйся в шахте.`;
-  else msg = `Собери все <b>128 примеров</b> в сундук — и откроется Эндер-дракон. Награда: <b class="gold">400 ₽</b>.`;
+  else msg = `Собери все <b>128 примеров</b> в сундук — и откроется Эндер-дракон. Всего на кону <b class="gold">800 ₽</b>: дракон 400 + мама 300 + рейд 100.`;
 
   $app.innerHTML = `
     <div class="row spread"><div class="row"><canvas class="face" id="face"></canvas><h2 style="margin:0">${S.nick}</h2></div>${muteBtn()}</div>
