@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minecraft-X</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{--text:#f2f2f2;--muted:#b5b5b5;--green:#7ad35f;--gold:#f5c542;--dia:#4fe0d6;--iron:#d8b89a;--red:#ff5c5c;--purple:#c27bff}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--text);font-family:'Press Start 2P',monospace;font-size:13px;line-height:1.7;
+  background-color:#1d1d1d;background-size:auto,64px;image-rendering:pixelated}
+canvas{image-rendering:pixelated}
+#app{max-width:900px;margin:0 auto;padding:24px 16px}
+h1{font-size:28px;color:var(--gold);text-shadow:4px 4px #3f2a00;margin:8px 0 4px;text-align:center}
+h2{font-size:16px;margin:0 0 12px}
+.sub{color:var(--muted);text-align:center;margin-bottom:24px}
+.panel{background:rgba(20,20,20,.82);border:4px solid #000;box-shadow:inset 3px 3px #555,inset -3px -3px #222;padding:18px;margin:14px 0}
+.btn{font:inherit;font-size:14px;color:#fff;text-shadow:2px 2px #3f3f3f;background:#7d7d7d;border:3px solid #000;
+  box-shadow:inset -3px -4px #4b4b4b,inset 3px 3px #b0b0b0;padding:16px 22px;cursor:pointer;margin:6px 6px 6px 0}
+.btn:hover:not(:disabled){background:#7c87c9}
+.btn:disabled{background:#4a4a4a;color:#8a8a8a;text-shadow:none;cursor:default}
+.btn.big{font-size:18px;padding:20px 28px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.spread{justify-content:space-between}
+.face{width:48px;height:48px;border:3px solid #000}
+.muted{color:var(--muted)}
+.ok{color:var(--green)}.bad{color:var(--red)}.gold{color:var(--gold)}.dia{color:var(--dia)}.purple{color:var(--purple)}
+input.nick{font:inherit;font-size:16px;background:#000;color:#fff;border:3px solid #a0a0a0;padding:12px;width:100%;max-width:420px}
+.skins{display:flex;gap:14px;flex-wrap:wrap;margin:16px 0}
+.skin{background:#2b2b2b;border:4px solid #000;padding:10px;cursor:pointer;text-align:center;font-size:10px}
+.skin canvas{width:72px;height:72px;display:block;margin:0 auto 8px}
+.skin.sel{border-color:var(--gold);background:#4a3f1a}
+.inv{display:flex;gap:14px;flex-wrap:wrap}
+.inv span{display:flex;align-items:center;gap:6px}
+.inv canvas{width:24px;height:24px}
+.biomes{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.biome{border:4px solid #000;padding:10px;font-size:11px}
+.cells{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;margin-top:8px}
+.cells i{display:block;aspect-ratio:1;border:1px solid rgba(0,0,0,.6)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:10px;margin-top:10px}
+.legend i{display:inline-block;width:12px;height:12px;border:1px solid #000;vertical-align:middle;margin-right:6px}
+.banner{border-left:6px solid var(--gold)}
+.q{font-size:clamp(34px,8vw,64px);text-align:center;margin:28px 0 8px;text-shadow:5px 5px #000}
+.inp{display:inline-block;min-width:2.2ch;border-bottom:6px solid var(--gold);color:var(--gold)}
+.track{position:relative;height:90px;margin:28px 0 10px;border-bottom:10px solid #5d8a2e;box-shadow:0 10px #6b4423}
+.track canvas{position:absolute;bottom:0;width:64px;height:64px}
+.mark{position:absolute;bottom:0;top:0;border-left:4px dashed var(--gold);font-size:10px;color:var(--gold);padding-left:6px}
+.fb{min-height:64px;text-align:center;font-size:18px;display:flex;align-items:center;justify-content:center;gap:14px}
+.fb canvas{width:48px;height:48px}
+.hp{height:22px;border:3px solid #000;background:#300;margin-top:8px}
+.hp div{height:100%;background:var(--purple);transition:width .2s}
+.center{text-align:center}
+.mute{background:none;border:none;color:#fff;font:inherit;cursor:pointer;font-size:12px}
+.errs{font-size:12px;line-height:2.2}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// URL веб-приложения Apps Script (Code.gs). Пусто = игра работает без отправки результатов.
+const API = '';
+
+const PRACTICE_MS = 6000, FAST_MS = 3000, TEST_MS = 3000;
+const $app = document.getElementById('app');
+const today = () => new Date().toLocaleDateString('sv');
+const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const ls = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+             set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+
+// ---------- пиксель-арт ----------
+const SKINS = [
+  { name: 'Стив',    pal: { H: '#4a2f1a', S: '#c69c7a', W: '#fff', B: '#4a5fc1', N: '#8d5d42', M: '#6b3b28' } },
+  { name: 'Алекс',   pal: { H: '#d9822b', S: '#f0c9a0', W: '#fff', B: '#3a8f3a', N: '#d9a57a', M: '#b5654a' } },
+  { name: 'Зомби',   pal: { H: '#2e5f2e', S: '#4f8f4f', W: '#2e5f2e', B: '#111', N: '#3f7a3f', M: '#244a24' } },
+  { name: 'Скелет',  pal: { H: '#bdbdbd', S: '#d6d6d6', W: '#d6d6d6', B: '#222', N: '#555', M: '#555' } },
+];
+const HEAD = ['HHHHHHHH','HHHHHHHH','HSSSSSSH','SSSSSSSS','SWBSSBWS','SSSNNSSS','SSMMMMSS','SSSSSSSS'];
+const CREEPER = { rows: ['GgGGgGGg','gGGgGGgG','GKKGGKKG','GKKGGKKg','gGGKKGGG','GGKKKKGg','GgKKKKGG','gGKGGKGG'], pal: { G: '#5bb04a', g: '#3e8a35', K: '#111' } };
+const DRAGON = { rows: ['KKKKKKKK','KkKKKKkK','KPPKKPPK','KKKKKKKK','KkkkkkkK','KKKKKKKK','KWKWKWKK','KKKKKKKK'], pal: { K: '#1a1a1a', k: '#333', P: '#c060ff', W: '#ddd' } };
+const ORE_ROWS = ['sSsssSss','soosssSs','sooSsoos','ssssSoos','sSoossss','ssoosSos','sssssoos','sSssssss'];
+const ORES = { d: ['Алмаз', '#4fe0d6', 'dia'], g: ['Золото', '#f5c542', 'gold'], i: ['Железо', '#d8b89a', ''], s: ['Камень', '#9a9a9a', 'muted'] };
+
+function pix(rows, pal) {
+  const c = document.createElement('canvas'); c.width = c.height = 8;
+  const x = c.getContext('2d');
+  rows.forEach((r, y) => [...r].forEach((ch, i) => { x.fillStyle = pal[ch] || '#000'; x.fillRect(i, y, 1, 1); }));
+  return c;
+}
+const oreCanvas = k => pix(ORE_ROWS, { s: '#7f7f7f', S: '#6b6b6b', o: ORES[k][1] });
+const skinCanvas = i => pix(HEAD, SKINS[i].pal);
+function put(sel, canvas) {
+  const el = $app.querySelector(sel); if (!el) return;
+  Object.assign(canvas, { className: el.className, id: el.id }); canvas.style.cssText = el.style.cssText; el.replaceWith(canvas);
+}
+document.body.style.backgroundImage = `linear-gradient(rgba(0,0,0,.6),rgba(0,0,0,.6)),url(${pix(ORE_ROWS, { s: '#7f7f7f', S: '#6b6b6b', o: '#757575' }).toDataURL()})`;
+
+// ---------- звук (синтез, без файлов) ----------
+let AC = null, muted = !!ls.get('mx-mute');
+function ac() { AC ||= new AudioContext(); if (AC.state === 'suspended') AC.resume(); return AC; }
+function beep(f, d, type = 'square', v = .06, at = 0) {
+  if (muted) return; const a = ac(), o = a.createOscillator(), g = a.createGain(), t = a.currentTime + at;
+  o.type = type; o.frequency.value = f; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t + d + .02);
+}
+function noise(d, v, freq, type = 'lowpass') {
+  if (muted) return; const a = ac(), n = a.sampleRate * d | 0, b = a.createBuffer(1, n, a.sampleRate), ch = b.getChannelData(0);
+  for (let i = 0; i < n; i++) ch[i] = Math.random() * 2 - 1;
+  const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  s.buffer = b; f.type = type; f.frequency.value = freq;
+  g.gain.setValueAtTime(v, a.currentTime); g.gain.exponentialRampToValueAtTime(.0001, a.currentTime + d);
+  s.connect(f).connect(g).connect(a.destination); s.start();
+}
+const SFX = {
+  ore(k) { noise(.07, .25, 2500); const f = { d: 1320, g: 1046, i: 880 }[k]; if (f) { beep(f, .08, 'square', .05, .05); beep(f * 1.5, .12, 'square', .05, .12); } },
+  boom() { noise(.7, .6, 500); beep(55, .45, 'sawtooth', .1); },
+  hiss() { noise(.9, .1, 5000, 'highpass'); },
+  roar() { beep(90, .5, 'sawtooth', .08); beep(70, .6, 'sawtooth', .08, .1); },
+  win() { [523, 659, 784, 1046, 1318].forEach((f, i) => beep(f, .2, 'square', .06, i * .14)); },
+};
+const muteBtn = () => `<button class="mute" id="mute">${muted ? '🔇 звук выкл' : '🔊 звук вкл'}</button>`;
+function bindMute() { const b = document.getElementById('mute'); if (b) b.onclick = () => { muted = !muted; ls.set('mx-mute', muted); b.outerHTML = muteBtn(); bindMute(); }; }
+
+// ---------- состояние ----------
+// Факт: "7×8" или "56:8". b — уровень: 0 нет, 1 прокопан, 2 добыт, 3 в сундуке (+1 только за быстрый верный ответ в новый день).
+const FACTS = []; for (let a = 2; a <= 9; a++) for (let b = 2; b <= 9; b++) FACTS.push(`${a}×${b}`, `${a * b}:${a}`);
+const MULT = FACTS.filter(q => q.includes('×')), DIV = FACTS.filter(q => q.includes(':'));
+const answer = q => { const [x, y] = q.split(/[×:]/).map(Number); return q.includes('×') ? x * y : x / y; };
+const show = q => q.replace('×', ' × ').replace(':', ' : ');
+const biomeOf = q => q.includes('×') ? +q.split('×')[0] : +q.split(':')[1];
+
+let S = ls.get('mx');
+let Q = ls.get('mx-queue') || [];
+const fact = q => (S.facts[q] ||= { b: 0, last: '' });
+const chestCount = () => FACTS.filter(q => fact(q).b === 3).length;
+function save() { S.rev = (S.rev || 0) + 1; ls.set('mx', S); }
+
+function grade(q, ok, ms) {
+  const f = fact(q), t = today();
+  if (!ok) { f.b = Math.min(f.b, 1); f.last = t; return 'boom'; }
+  if (ms > FAST_MS) return 's';
+  if (f.last !== t) { f.b = Math.min(3, f.b + 1); f.last = t; }
+  return ms < 1500 ? 'd' : ms < 2200 ? 'g' : 'i';
+}
+
+function pickSession() {
+  const t = today();
+  const work = shuffle(FACTS.filter(q => fact(q).b < 3 && fact(q).last !== t)).sort((x, y) => fact(x).b - fact(y).b);
+  const chest = shuffle(FACTS.filter(q => fact(q).b === 3));
+  const n = Math.min(40, work.length);
+  return shuffle(work.slice(0, n).concat(chest.slice(0, 50 - n)));
+}
+
+// ---------- синхронизация с таблицей ----------
+let flushing = false;
+function send(type, extra = {}) {
+  Q.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 8), type, nick: S.nick, at: new Date().toLocaleString('ru'), ...extra, state: JSON.parse(JSON.stringify(S)) });
+  ls.set('mx-queue', Q); flush();
+}
+async function flush() {
+  if (!API || flushing) return; flushing = true;
+  try {
+    while (Q.length) {
+      const r = await fetch(API, { method: 'POST', body: JSON.stringify(Q[0]) });
+      if (!r.ok) break;
+      Q.shift(); ls.set('mx-queue', Q);
+    }
+  } catch {}
+  flushing = false;
+}
+async function pull() {
+  if (!API) return false;
+  try {
+    const r = await (await fetch(API)).json();
+    let changed = false;
+    if (r.state) { const s = JSON.parse(r.state); if (!S || (s.rev || 0) > (S.rev || 0)) { S = s; changed = true; } }
+    if (S && r.nick && r.nick !== S.nick) { S.nick = r.nick; changed = true; }
+    if (changed) ls.set('mx', S);
+    return changed;
+  } catch { return false; }
+}
+
+// ---------- клавиатура ----------
+let onKey = null;
+document.addEventListener('keydown', e => onKey && onKey(e));
+
+// ---------- экраны ----------
+function screenCreate() {
+  let skin = 0;
+  $app.innerHTML = `
+    <h1>MINECRAFT-X</h1><div class="sub">Таблица умножения. Режим выживания.</div>
+    <div class="panel"><h2>Создай персонажа</h2>
+      <input class="nick" id="nick" maxlength="16" placeholder="Твой ник" autocomplete="off">
+      <div class="skins">${SKINS.map((s, i) => `<div class="skin${i ? '' : ' sel'}" data-i="${i}"><canvas class="sk${i}"></canvas>${s.name}</div>`).join('')}</div>
+      <button class="btn big" id="go">Создать мир</button> <span class="bad" id="err"></span>
+    </div>`;
+  SKINS.forEach((_, i) => put('.sk' + i, skinCanvas(i)));
+  $app.querySelectorAll('.skin').forEach(el => el.onclick = () => {
+    $app.querySelectorAll('.skin').forEach(x => x.classList.remove('sel')); el.classList.add('sel'); skin = +el.dataset.i;
+  });
+  const nick = document.getElementById('nick'); nick.focus();
+  document.getElementById('go').onclick = () => {
+    const n = nick.value.trim(); if (!n) { document.getElementById('err').textContent = 'Введи ник'; return; }
+    S = { rev: 0, nick: n, skin, facts: {}, ores: { d: 0, g: 0, i: 0, s: 0 }, diag: false, lastSession: '', lastTest: '', won: '', wonAt: '', raidLast: '', raidWon: '' };
+    save(); send('create'); screenDiagIntro();
+  };
+}
+
+function screenDiagIntro() {
+  $app.innerHTML = `
+    <h1>Разведка</h1>
+    <div class="panel"><p>${S.nick}, прежде чем копать, надо понять, где лежат алмазы.</p>
+      <p>Сейчас будет <b class="gold">96 примеров</b>. Печатай ответ цифрами — он засчитается сам.</p>
+      <p>Крипер идёт к тебе. Успел до <span class="gold">жёлтой линии (3 сек)</span> — добыл руду. Чем быстрее, тем ценнее:
+      <span class="dia">алмаз</span> → <span class="gold">золото</span> → железо → <span class="muted">камень</span>.</p>
+      <p>Не успел или ошибся — <span class="bad">БУМ</span>.</p>
+      <button class="btn big" id="go">Начать разведку</button></div>`;
+  document.getElementById('go').onclick = () => {
+    const list = shuffle(MULT.slice().concat(shuffle(DIV.slice()).slice(0, 32)));
+    run('diag', list, PRACTICE_MS, (ans, ms) => { S.diag = true; S.lastSession = today(); save(); send('diag', { answers: ans, ms }); screenResult('Разведка окончена!', ans); });
+  };
+}
+
+function screenHome() {
+  onKey = null;
+  const t = today(), chest = chestCount();
+  const canSession = S.lastSession !== t;
+  const dragonOpen = chest === FACTS.length && !S.won;
+  const canDragon = dragonOpen && S.lastTest !== t;
+  const raidOpen = S.won && !S.raidWon && daysBetween(S.won, t) >= 7;
+  const canRaid = raidOpen && S.raidLast !== t;
+  let msg;
+  if (S.raidWon) msg = `<span class="dia">ЛЕГЕНДА!</span> Дракон повержен, рейд пройден. Таблица твоя навсегда.`;
+  else if (S.won) msg = `<span class="purple">Дракон повержен ${S.wonAt}.</span> Награда: <b class="gold">400 ₽</b>. Ещё <b class="gold">+300 ₽</b> — за живую проверку (10 примеров по видеозвонку). ` +
+    (raidOpen ? `<b class="gold">Рейд открыт!</b> 40 примеров без ошибок = <b class="gold">+100 ₽</b>.` : `Рейд на <b class="gold">+100 ₽</b> откроется через ${7 - daysBetween(S.won, t)} дн.`);
+  else if (dragonOpen) msg = canDragon ? `<b class="purple">Эндер-дракон проснулся!</b> 80 примеров, по 3 секунды, без единой ошибки = <b class="gold">400 ₽</b>.` : `Дракон отдыхает до завтра. Потренируйся в шахте.`;
+  else msg = `Собери все <b>128 примеров</b> в сундук — и откроется Эндер-дракон. Награда: <b class="gold">400 ₽</b>.`;
+
+  $app.innerHTML = `
+    <div class="row spread"><div class="row"><canvas class="face" id="face"></canvas><h2 style="margin:0">${S.nick}</h2></div>${muteBtn()}</div>
+    <div class="panel"><div class="inv">${Object.keys(ORES).map(k => `<span><canvas class="ore-${k}"></canvas>${S.ores[k]}</span>`).join('')}</div></div>
+    <div class="panel banner">${msg}</div>
+    <div class="panel">
+      ${canRaid ? `<button class="btn big" id="raid">⚔ Рейд (+100 ₽)</button>` : ''}
+      ${dragonOpen ? `<button class="btn big" id="dragon" ${canDragon ? '' : 'disabled'}>🐉 Бой с драконом</button>` : ''}
+      <button class="btn big" id="mine" ${canSession ? '' : 'disabled'}>⛏ ${canSession ? 'Вылазка в шахту' : 'Шахта закрыта до завтра'}</button>
+      <p class="muted">В сундуке: <b class="dia">${chest}</b> / ${FACTS.length}. Одна вылазка в день — мозг укладывает добычу в сундук, пока ты спишь.</p>
+    </div>
+    <div class="panel"><h2>Карта биомов</h2><div class="biomes">${BIOMES.map(biomeCard).join('')}</div>
+      <div class="legend"><span><i style="background:${BOX[0]}"></i>не найден</span><span><i style="background:${BOX[1]}"></i>прокопан</span><span><i style="background:${BOX[2]}"></i>добыт</span><span><i style="background:${BOX[3]}"></i>в сундуке</span></div>
+      <p class="muted" style="font-size:10px">Верхний ряд — умножение, нижний — деление.</p></div>`;
+  put('#face', skinCanvas(S.skin));
+  Object.keys(ORES).forEach(k => put('.ore-' + k, oreCanvas(k)));
+  bindMute();
+  document.getElementById('mine').onclick = () => {
+    const list = pickSession(); S.lastSession = t; save();
+    run('session', list, PRACTICE_MS, (ans, ms) => { save(); send('session', { answers: ans, ms }); screenResult('Вылазка окончена!', ans); });
+  };
+  const d = document.getElementById('dragon');
+  if (d) d.onclick = () => startTest('test', shuffle(MULT.slice().concat(shuffle(DIV.slice()).slice(0, 16))));
+  const r = document.getElementById('raid');
+  if (r) r.onclick = () => startTest('raid', shuffle(shuffle(MULT.slice()).slice(0, 32).concat(shuffle(DIV.slice()).slice(0, 8))));
+}
+
+const BOX = ['#262626', '#7f7f7f', '#d8b89a', '#4fe0d6'];
+const BIOMES = [[2, 'Равнины', '#4f7f33'], [3, 'Пустыня', '#9c8a4a'], [4, 'Лес', '#2f5a2f'], [5, 'Тайга', '#35584c'],
+                [6, 'Джунгли', '#2f7a3a'], [7, 'Незер', '#6e1f1f'], [8, 'Пещеры', '#444'], [9, 'Энд', '#2d1f40']];
+function biomeCard([n, name, color]) {
+  const qs = FACTS.filter(q => biomeOf(q) === n);
+  const m = qs.filter(q => q.includes('×')), d = qs.filter(q => q.includes(':'));
+  const done = qs.filter(q => fact(q).b === 3).length;
+  return `<div class="biome" style="background:${color}"><div class="row spread"><b>${name}</b><span>×${n}</span></div>
+    <div class="muted">${done}/16 ${done === 16 ? '✔' : ''}</div>
+    <div class="cells">${m.concat(d).map(q => `<i title="${show(q)}" style="background:${BOX[fact(q).b]}"></i>`).join('')}</div></div>`;
+}
+
+function startTest(mode, list) {
+  const t = today();
+  if (mode === 'test') S.lastTest = t; else S.raidLast = t;
+  save(); send(mode + '_start');
+  run(mode, list, TEST_MS, (ans, ms) => {
+    const wrong = ans.filter(a => !a.ok);
+    const passed = wrong.length === 0;
+    if (passed) { if (mode === 'test') { S.won = t; S.wonAt = new Date().toLocaleString('ru'); } else S.raidWon = new Date().toLocaleString('ru'); }
+    else if (mode === 'test') wrong.forEach(a => { fact(a.q).b = Math.min(fact(a.q).b, 2); }); // ошибки — снова в шахту
+    save(); send(mode, { answers: ans, ms, passed });
+    passed ? screenVictory(mode) : screenResult(mode === 'test' ? 'Дракон устоял...' : 'Рейд провален...', ans,
+      `Нужно ${ans.length}/${ans.length}. Завтра можно снова. ${mode === 'test' ? 'Эти примеры вернулись в шахту — отработай их.' : ''}`);
+  });
+}
+
+function screenResult(title, ans, note = '') {
+  onKey = null;
+  const good = ans.filter(a => a.ok).length, wrong = ans.filter(a => !a.ok);
+  const uniq = [...new Set(wrong.map(a => a.q))];
+  $app.innerHTML = `<h1>${title}</h1>
+    <div class="panel center"><p style="font-size:20px"><span class="ok">${good}</span> / ${ans.length}</p>${note ? `<p>${note}</p>` : ''}
+      ${uniq.length ? `<p class="bad">Ошибки и опоздания:</p><p class="errs">${uniq.map(q => `${show(q)} = <span class="gold">${answer(q)}</span>`).join('<br>')}</p>` : '<p class="ok">Без единой ошибки!</p>'}
+      <button class="btn big" id="home">В лагерь</button></div>`;
+  document.getElementById('home').onclick = screenHome;
+}
+
+function screenVictory(mode) {
+  onKey = null; SFX.win();
+  $app.innerHTML = mode === 'test' ? `
+    <h1 class="purple">ДРАКОН ПОВЕРЖЕН!</h1>
+    <div class="panel center"><canvas class="dr" style="width:128px;height:128px"></canvas>
+      <p style="font-size:18px">${S.nick}: 80 / 80</p><p class="gold">${S.wonAt}</p>
+      <p>Награда: <b class="gold">400 ₽</b>.</p>
+      <p>Бонус <b class="gold">+300 ₽</b>: живая проверка — 10 примеров по видеозвонку.</p>
+      <p>Через 7 дней откроется рейд: <b class="gold">+100 ₽</b>.</p>
+      <p class="muted">Сфоткай этот экран и отправь.</p>
+      <button class="btn big" id="home">В лагерь</button></div>` : `
+    <h1 class="dia">РЕЙД ПРОЙДЕН!</h1>
+    <div class="panel center"><canvas class="dr" style="width:128px;height:128px"></canvas>
+      <p style="font-size:18px">${S.nick}: без ошибок</p><p class="gold">${S.raidWon}</p>
+      <p>Награда: <b class="gold">+100 ₽</b>. Ты — легенда шахты.</p>
+      <p class="muted">Сфоткай этот экран и отправь.</p>
+      <button class="btn big" id="home">В лагерь</button></div>`;
+  put('.dr', mode === 'test' ? pix(DRAGON.rows, DRAGON.pal) : skinCanvas(S.skin));
+  document.getElementById('home').onclick = screenHome;
+}
+
+// ---------- игровой раунд ----------
+// mode: diag | session (тренировка, 6 с, руда) | test | raid (3 с, без права на ошибку)
+function run(mode, list, limit, onEnd) {
+  const exam = mode === 'test' || mode === 'raid';
+  const started = Date.now(), answers = [], requeued = new Set();
+  let i = 0, q, input = '', t0 = 0, raf = 0, busy = true, hissed = false;
+  $app.innerHTML = `
+    <div class="row spread"><span id="prog"></span>${muteBtn()}</div>
+    ${exam ? `<div class="row"><canvas class="dr" style="width:48px;height:48px"></canvas><div style="flex:1"><div class="hp"><div id="hp" style="width:100%"></div></div></div></div>` : ''}
+    <div class="q"><span id="qt"></span> = <span class="inp" id="inp"></span></div>
+    <div class="track" id="track"><canvas id="hero"></canvas>${limit > FAST_MS ? '<div class="mark" id="mark">3 сек</div>' : ''}<canvas id="cr"></canvas></div>
+    <div class="fb" id="fb"></div>
+    <p class="muted center" style="font-size:10px">Цифры — ответ, Backspace — стереть</p>`;
+  put('#hero', skinCanvas(S.skin)); put('#cr', pix(CREEPER.rows, CREEPER.pal));
+  if (exam) put('.dr', pix(DRAGON.rows, DRAGON.pal));
+  bindMute();
+  const $ = id => document.getElementById(id);
+  const track = $('track'), cr = $('cr'), mark = $('mark');
+  const posAt = frac => 64 + (1 - frac) * (track.clientWidth - 128);
+  if (mark) mark.style.left = posAt(FAST_MS / limit) + 'px';
+  if (exam) SFX.roar();
+
+  function next() {
+    if (i >= list.length) { onKey = null; onEnd(answers, Date.now() - started); return; }
+    q = list[i]; input = ''; hissed = false;
+    $('prog').textContent = `${i + 1} / ${list.length}`;
+    $('qt').textContent = show(q); $('inp').textContent = ' '; $('fb').innerHTML = '';
+    t0 = performance.now(); busy = false; tick();
+  }
+  function tick() {
+    const el = performance.now() - t0;
+    if (el >= limit) return submit(true);
+    if (!hissed && limit - el < 1000) { hissed = true; SFX.hiss(); }
+    cr.style.left = posAt(el / limit) + 'px';
+    raf = requestAnimationFrame(tick);
+  }
+  function submit(timeout) {
+    if (busy) return; busy = true; cancelAnimationFrame(raf);
+    const ms = Math.round(performance.now() - t0), g = timeout ? '' : input;
+    const ok = !timeout && +g === answer(q) && ms <= limit;
+    answers.push({ q, g, ms, ok });
+    const fb = $('fb');
+    if (exam) {
+      if (ok) { SFX.ore('g'); $('hp').style.width = (100 * (1 - answers.filter(a => a.ok).length / list.length)) + '%'; fb.innerHTML = '<span class="ok">Удар!</span>'; }
+      else { SFX.boom(); fb.innerHTML = `<span class="bad">${timeout ? 'Не успел' : 'Мимо'}:</span> ${show(q)} = <span class="gold">${answer(q)}</span>`; }
+    } else {
+      const r = grade(q, ok, ms);
+      if (r === 'boom') {
+        SFX.boom(); fb.innerHTML = `<span class="bad">БУМ!</span> ${show(q)} = <span class="gold">${answer(q)}</span>`;
+        if (mode === 'session' && !requeued.has(q)) { requeued.add(q); list.splice(Math.min(i + 5, list.length), 0, q); }
+      } else {
+        S.ores[r]++; SFX.ore(r);
+        fb.innerHTML = `<canvas class="o"></canvas><span class="${ORES[r][2]}">${ORES[r][0]}!</span>${r === 's' ? '<span class="muted" style="font-size:11px">быстрее 3 сек = руда</span>' : ''}`;
+        fb.querySelector('.o').replaceWith(Object.assign(oreCanvas(r), { style: 'width:48px;height:48px' }));
+      }
+      save();
+    }
+    i++; setTimeout(next, ok ? 450 : 1800);
+  }
+  onKey = e => {
+    if (busy) return;
+    if (/^[0-9]$/.test(e.key) && input.length < 3) {
+      input += e.key; $('inp').textContent = input;
+      if (input.length === String(answer(q)).length) submit(false);
+    } else if (e.key === 'Backspace') { input = input.slice(0, -1); $('inp').textContent = input || ' '; e.preventDefault(); }
+    else if (e.key === 'Enter' && input) submit(false);
+  };
+  setTimeout(next, exam ? 1200 : 400);
+}
+
+// ---------- старт ----------
+function route() { !S ? screenCreate() : !S.diag ? screenDiagIntro() : screenHome(); }
+route();
+flush();
+pull().then(changed => { if (changed && !onKey) route(); });
+</script>
+</body>
+</html>
