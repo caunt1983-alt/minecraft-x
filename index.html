@@ -236,7 +236,7 @@ function screenHome() {
   const canRaid = raidOpen && S.raidLast !== t;
   let msg;
   if (S.raidWon) msg = `<span class="dia">ЛЕГЕНДА!</span> Дракон повержен, рейд пройден. Таблица твоя навсегда.`;
-  else if (S.won) msg = `<span class="purple">Дракон повержен ${S.wonAt}.</span> Награда: <b class="gold">400 ₽</b>. Ещё <b class="gold">+300 ₽</b> — за живую проверку (10 примеров по видеозвонку). ` +
+  else if (S.won) msg = `<span class="purple">Дракон повержен ${S.wonAt}.</span> Награда: <b class="gold">400 ₽</b>. Ещё <b class="gold">+300 ₽</b> — если ответишь маме вслух 10 примеров без ошибок. ` +
     (raidOpen ? `<b class="gold">Рейд открыт!</b> 40 примеров без ошибок = <b class="gold">+100 ₽</b>.` : `Рейд на <b class="gold">+100 ₽</b> откроется через ${7 - daysBetween(S.won, t)} дн.`);
   else if (dragonOpen) msg = canDragon ? `<b class="purple">Эндер-дракон проснулся!</b> 80 примеров, по 3 секунды, без единой ошибки = <b class="gold">400 ₽</b>.` : `Дракон отдыхает до завтра. Потренируйся в шахте.`;
   else msg = `Собери все <b>128 примеров</b> в сундук — и откроется Эндер-дракон. Награда: <b class="gold">400 ₽</b>.`;
@@ -314,7 +314,7 @@ function screenRules(back) {
     <div class="panel"><h2 class="purple">Эндер-дракон</h2>
       <p>Просыпается, когда <b>все 128 примеров</b> в сундуке. 80 примеров по 3 сек, <b>ни одной ошибки</b>. Одна попытка в день.</p>
       <h2 class="gold">Награды — 800 ₽</h2>
-      <p>Дракон — <b class="gold">400 ₽</b> (сфоткай экран победы)<br>Живая проверка по видеозвонку, 10 примеров вслух — <b class="gold">+300 ₽</b><br>
+      <p>Дракон — <b class="gold">400 ₽</b> (сфоткай экран победы)<br>Мама проверит вживую: 10 примеров вслух без ошибок — <b class="gold">+300 ₽</b><br>
       Рейд через 7 дней, 40 примеров без ошибок — <b class="gold">+100 ₽</b></p>
       <p class="muted">Хитрить бесполезно: каждый ответ и время уходят в журнал.</p>
       <button class="btn big" id="back">Понятно!</button></div>`;
@@ -339,7 +339,7 @@ function screenVictory(mode) {
     <div class="panel center"><canvas class="dr" style="width:128px;height:128px"></canvas>
       <p style="font-size:18px">${S.nick}: 80 / 80</p><p class="gold">${S.wonAt}</p>
       <p>Награда: <b class="gold">400 ₽</b>.</p>
-      <p>Бонус <b class="gold">+300 ₽</b>: живая проверка — 10 примеров по видеозвонку.</p>
+      <p>Бонус <b class="gold">+300 ₽</b>: ответь маме вслух 10 примеров без ошибок.</p>
       <p>Через 7 дней откроется рейд: <b class="gold">+100 ₽</b>.</p>
       <p class="muted">Сфоткай этот экран и отправь.</p>
       <button class="btn big" id="home">В лагерь</button></div>` : `
