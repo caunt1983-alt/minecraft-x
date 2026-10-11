@@ -216,7 +216,8 @@ function screenDiagIntro() {
       <p>Крипер идёт к тебе. Успел до <span class="gold">жёлтой линии (3 сек)</span> — добыл руду. Чем быстрее, тем ценнее:
       <span class="dia">алмаз</span> → <span class="gold">золото</span> → железо → <span class="muted">камень</span>.</p>
       <p>Не успел или ошибся — <span class="bad">БУМ</span>.</p>
-      <button class="btn big" id="go">Начать разведку</button></div>`;
+      <button class="btn big" id="go">Начать разведку</button> <button class="btn" id="rules">? Все правила</button></div>`;
+  document.getElementById('rules').onclick = () => screenRules(screenDiagIntro);
   document.getElementById('go').onclick = () => {
     const list = shuffle(MULT.slice().concat(shuffle(DIV.slice()).slice(0, 32)));
     run('diag', list, PRACTICE_MS, (ans, ms) => { S.diag = true; S.lastSession = today(); save(); send('diag', { answers: ans, ms }); screenResult('Разведка окончена!', ans); });
@@ -246,6 +247,7 @@ function screenHome() {
       ${canRaid ? `<button class="btn big" id="raid">⚔ Рейд (+100 ₽)</button>` : ''}
       ${dragonOpen ? `<button class="btn big" id="dragon" ${canDragon ? '' : 'disabled'}>🐉 Бой с драконом</button>` : ''}
       <button class="btn big" id="mine" ${canSession ? '' : 'disabled'}>⛏ ${canSession ? 'Вылазка в шахту' : 'Шахта закрыта до завтра'}</button>
+      <button class="btn" id="rules">? Как играть</button>
       <p class="muted">В сундуке: <b class="dia">${chest}</b> / ${FACTS.length}. Одна вылазка в день — мозг укладывает добычу в сундук, пока ты спишь.</p>
     </div>
     <div class="panel"><h2>Карта биомов</h2><div class="biomes">${BIOMES.map(biomeCard).join('')}</div>
@@ -254,6 +256,7 @@ function screenHome() {
   put('#face', skinCanvas(S.skin));
   Object.keys(ORES).forEach(k => put('.ore-' + k, oreCanvas(k)));
   bindMute();
+  document.getElementById('rules').onclick = () => screenRules(screenHome);
   document.getElementById('mine').onclick = () => {
     const list = pickSession(); S.lastSession = t; save();
     run('session', list, PRACTICE_MS, (ans, ms) => { save(); send('session', { answers: ans, ms }); screenResult('Вылазка окончена!', ans); });
@@ -289,6 +292,31 @@ function startTest(mode, list) {
     passed ? screenVictory(mode) : screenResult(mode === 'test' ? 'Дракон устоял...' : 'Рейд провален...', ans,
       `Нужно ${ans.length}/${ans.length}. Завтра можно снова. ${mode === 'test' ? 'Эти примеры вернулись в шахту — отработай их.' : ''}`);
   });
+}
+
+function screenRules(back) {
+  onKey = null;
+  $app.innerHTML = `<h1>Как играть</h1>
+    <div class="panel"><h2>Ответы</h2>
+      <p>Печатай ответ цифрами — когда цифр хватит, он засчитается сам. Ошибся клавишей — <b>Backspace</b>.</p>
+      <h2>Крипер</h2>
+      <p>Крипер идёт к тебе. Чем быстрее ответ, тем ценнее добыча:</p>
+      <p><span class="dia">Алмаз</span> — быстрее 1,5 сек<br><span class="gold">Золото</span> — быстрее 2 сек<br>
+      Железо — до <span class="gold">жёлтой линии</span> (3 сек)<br><span class="muted">Камень</span> — верно, но медленно, не засчитывается<br>
+      <span class="bad">БУМ</span> — ошибка или крипер дошёл. Пример скоро вернётся.</p></div>
+    <div class="panel"><h2>Шахта</h2>
+      <p>Одна вылазка в день, 5–10 минут. Пока спишь, мозг укладывает добычу в сундук.</p>
+      <p>Пример попадает <span class="dia">в сундук</span>, когда ты <b>3 разных дня</b> ответил верно и быстрее 3 сек. Ошибся на примере из сундука — он выпадает обратно.</p>
+      <p>Закрыл игру посреди вылазки — вылазка на сегодня сгорела (добыча сохраняется).</p>
+      <p>Карта биомов — столбики таблицы от ×2 до ×9: <span style="color:${BOX[1]}">прокопан</span> → <span style="color:${BOX[2]}">добыт</span> → <span style="color:${BOX[3]}">в сундуке</span>.</p></div>
+    <div class="panel"><h2 class="purple">Эндер-дракон</h2>
+      <p>Просыпается, когда <b>все 128 примеров</b> в сундуке. 80 примеров по 3 сек, <b>ни одной ошибки</b>. Одна попытка в день.</p>
+      <h2 class="gold">Награды — 800 ₽</h2>
+      <p>Дракон — <b class="gold">400 ₽</b> (сфоткай экран победы)<br>Живая проверка по видеозвонку, 10 примеров вслух — <b class="gold">+300 ₽</b><br>
+      Рейд через 7 дней, 40 примеров без ошибок — <b class="gold">+100 ₽</b></p>
+      <p class="muted">Хитрить бесполезно: каждый ответ и время уходят в журнал.</p>
+      <button class="btn big" id="back">Понятно!</button></div>`;
+  document.getElementById('back').onclick = back;
 }
 
 function screenResult(title, ans, note = '') {
