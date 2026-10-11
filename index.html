@@ -163,7 +163,7 @@ async function flush() {
   if (!API || flushing) return; flushing = true;
   try {
     while (Q.length) {
-      const r = await fetch(API, { method: 'POST', body: JSON.stringify(Q[0]) });
+      const r = await fetch(API, { method: 'POST', body: JSON.stringify(Q[0]), signal: AbortSignal.timeout(40000) });
       if (!r.ok) break;
       Q.shift(); ls.set('mx-queue', Q);
     }
@@ -173,10 +173,12 @@ async function flush() {
 async function pull() {
   if (!API) return false;
   try {
-    const r = await (await fetch(API)).json();
+    const r = await (await fetch(API, { signal: AbortSignal.timeout(40000) })).json();
+    if (onKey) return false; // идёт раунд — не трогаем состояние
     let changed = false;
-    if (r.state) { const s = JSON.parse(r.state); if (!S || (s.rev || 0) > (S.rev || 0)) { S = s; changed = true; } }
-    if (S && r.nick && r.nick !== S.nick) { S.nick = r.nick; changed = true; }
+    // Чужого персонажа (другой pid) не подхватываем: только восстановление своего.
+    if (r.state) { const s = JSON.parse(r.state); if (s.pid && (!S || (s.pid === S.pid && (s.rev || 0) > (S.rev || 0)))) { S = s; changed = true; } }
+    if (S && r.state && JSON.parse(r.state).pid === S.pid && r.nick && r.nick !== S.nick) { S.nick = r.nick; changed = true; }
     if (changed) ls.set('mx', S);
     return changed;
   } catch { return false; }
@@ -203,7 +205,7 @@ function screenCreate() {
   const nick = document.getElementById('nick'); nick.focus();
   document.getElementById('go').onclick = () => {
     const n = nick.value.trim(); if (!n) { document.getElementById('err').textContent = 'Введи ник'; return; }
-    S = { rev: 0, nick: n, skin, facts: {}, ores: { d: 0, g: 0, i: 0, s: 0 }, diag: false, lastSession: '', lastTest: '', won: '', wonAt: '', raidLast: '', raidWon: '' };
+    S = { rev: 0, pid: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), nick: n, skin, facts: {}, ores: { d: 0, g: 0, i: 0, s: 0 }, diag: false, lastSession: '', lastTest: '', won: '', wonAt: '', raidLast: '', raidWon: '' };
     save(); send('create'); screenDiagIntro();
   };
 }
@@ -422,6 +424,12 @@ function run(mode, list, limit, onEnd) {
 }
 
 // ---------- старт ----------
+// #reset — стереть игру в этом браузере (свой прогресс потом вернётся из таблицы).
+if (location.hash === '#reset') {
+  try { localStorage.removeItem('mx'); localStorage.removeItem('mx-queue'); } catch {}
+  S = null; Q = []; history.replaceState(null, '', location.pathname);
+}
+if (S && !S.pid) { S = null; Q = []; ls.set('mx', null); ls.set('mx-queue', []); } // тестовые сохранения до появления pid
 function route() { !S ? screenCreate() : !S.diag ? screenDiagIntro() : screenHome(); }
 route();
 flush();
